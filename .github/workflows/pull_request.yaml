@@ -2,6 +2,10 @@ name: Pull Request Update
 
 on:
   workflow_call:
+    inputs:
+      script_name:
+        type: string
+        required: true
 
 jobs:
   build:
@@ -18,10 +22,10 @@ jobs:
     - name: Lint
       run: black . --check
     - name: Docker Build
-      run: docker build -t temp .
+      run: docker buildx -t ${{inputs.script_name}} .
     - name: Run script locally with unit test
-      run: docker run temp
+      run: docker run ${{inputs.script_name}}
     - name: Docker cleanup
       run: |
-        docker rmi -f temp
+        docker rmi -f ${{inputs.script_name}}
 
