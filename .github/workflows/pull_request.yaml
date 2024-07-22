@@ -1,15 +1,15 @@
-name: Pull Request Update
+name: Lint Check and Test
 
 on:
   workflow_call:
     inputs:
       script_name:
         type: string
-        required: true
+        default: /scripts/test.sh
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: tensorflow/tensorflow:2.11.0-gpu
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3
@@ -21,11 +21,6 @@ jobs:
         pip install black pytest
     - name: Lint
       run: black . --check
-    - name: Docker Build
-      run: docker buildx build -t ${{inputs.script_name}} .
     - name: Run script locally with unit test
-      run: docker run ${{inputs.script_name}}
-    - name: Docker cleanup
-      run: |
-        docker rmi -f ${{inputs.script_name}}
+      run: ${{inputs.script_name}}
 
