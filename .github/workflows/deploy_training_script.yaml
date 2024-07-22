@@ -1,16 +1,22 @@
 name: Deploy ML Training Image
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'README.md'
+  workflow_call:
     secrets:
       API_KEY_ID:
         required: true
       API_KEY:
         required: true
+    inputs:
+      framework:
+        type: string
+        default: "unspecified"
+      script_name:
+        type: string
+        required: true
+      type:
+        type: string
+        default: "unspecified"
 
 jobs:
   deploy-staging:
@@ -26,7 +32,7 @@ jobs:
         echo "version-tag=$(date -u +'%Y-%m-%d')" >> $GITHUB_OUTPUT
         
     - name: Deploy Module to viam-dev Org
-      uses: viam-modules/classification-tflite/.github/actions/deploy@DATA-2821/workflows
+      uses: viam-modules/common-workflows/.github/actions/deploy@init
       with:
         api_key_id: ${{ secrets.API_KEY_ID }}
         api_key: ${{ secrets.API_KEY }}
