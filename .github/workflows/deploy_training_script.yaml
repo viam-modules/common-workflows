@@ -58,7 +58,6 @@ jobs:
       env:
         org_id: e76d1b3b-0468-4efd-bb7f-fb1d2b352fcb
       run: |
-        viam training-script upload --framework=${{inputs.framework}} --org-id=${{env.org_id}} --path=dist/model-0.1.tar.gz --script-name=${{inputs.script_name}} \
-          --type=${{inputs.type}} --version=${{ steps.get-image-tag.outputs.version-tag }}
+        viam training-script upload --framework=${{inputs.framework}} --org-id=${{env.org_id}} --path=dist/model-0.1.tar.gz --script-name=${{inputs.script_name}} --type=${{inputs.type}} --version=${{ steps.get-image-tag.outputs.version-tag }}
 
 
