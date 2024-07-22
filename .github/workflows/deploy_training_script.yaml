@@ -30,16 +30,35 @@ jobs:
       id: get-image-tag
       run: |
         echo "version-tag=$(date -u +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-        
-    - name: Deploy Module to viam-dev Org
-      uses: viam-modules/common-workflows/.github/actions/deploy@init
+
+    - name: Check out training script code
+      uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
       with:
-        api_key_id: ${{ secrets.API_KEY_ID }}
-        api_key: ${{ secrets.API_KEY }}
-        framework: tflite
-        script_name: classification-tflite
-        type: 
-        version: ${{ steps.get-image-tag.outputs.version-tag }} 
+        python-version: "3.10"
+
+    - name: Install Viam CLI
+      shell: bash
+      run: |
+        curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
+        chmod a+rx /usr/local/bin/viam
+
+    - name: Create training package
+      shell: bash
+      run: |
+        python3 setup.py sdist --formats=gztar
+
+    - name: Login to Viam CLI
+      shell: bash
+      run: |
+        viam login api-key --key-id ${{ secrets.API_KEY_ID }} --key ${{ secrets.API_KEY }}
+
+    - name: Push to Viam Registry
+      shell: bash
+      env:
         org_id: e76d1b3b-0468-4efd-bb7f-fb1d2b352fcb
+      run: |
+        viam training-script upload --framework=${{inputs.framework}} --org-id=${{env.org_id}} --path=dist/model-0.1.tar.gz --script-name=${{inputs.script_name}} \
+          --type=${{inputs.type}} --version=${{ steps.get-image-tag.outputs.version-tag }}  --type=${{inputs.type}}
 
 
