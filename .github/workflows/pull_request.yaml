@@ -22,7 +22,7 @@ jobs:
     - name: Lint
       run: black . --check
     - name: Docker Build
-      run: docker buildx -t ${{inputs.script_name}} .
+      run: docker buildx build -t ${{inputs.script_name}} .
     - name: Run script locally with unit test
       run: docker run ${{inputs.script_name}}
     - name: Docker cleanup
