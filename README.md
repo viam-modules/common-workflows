@@ -29,7 +29,7 @@ When you add a new training script you should add workflows in `.github/workflow
 ```
 jobs:
   build:
-    uses: viam-modules/common-workflows/.github/workflows/pull_request.yaml@main
+    uses: viam-modules/common-workflows/.github/workflows/lint_and_test.yaml@main
     with:
       test_script_name: scripts/test.sh
 ```
