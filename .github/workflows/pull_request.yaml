@@ -16,12 +16,9 @@ jobs:
         - .:/host
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
     - name: Install dependencies
       run: |
-        apt-get update && apt-get install -y libc6 libusb-1.0-0
+        apt-get update && apt-get install -y libc6
         python -m pip install --upgrade pip
         pip install black pytest
     - name: Lint
