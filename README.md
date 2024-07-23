@@ -31,5 +31,5 @@ jobs:
   build:
     uses: viam-modules/common-workflows/.github/workflows/pull_request.yaml@main
     with:
-      script_name: classification-tflite
+      test_script_name: scripts/test.sh
 ```

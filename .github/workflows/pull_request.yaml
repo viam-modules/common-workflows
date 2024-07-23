@@ -3,13 +3,14 @@ name: Lint Check and Test
 on:
   workflow_call:
     inputs:
-      script_name:
+      test_script_name:
         type: string
         default: /scripts/test.sh
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    name: Lint and Test Code
     container:
       image: tensorflow/tensorflow:2.11.1-gpu
       volumes:
@@ -24,5 +25,5 @@ jobs:
     - name: Lint
       run: black . --check
     - name: Run script locally with unit test
-      run: ${{inputs.script_name}}
+      run: ${{inputs.test_script_name}}
 
