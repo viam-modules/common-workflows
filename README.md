@@ -14,8 +14,7 @@ jobs:
     with:
       framework: tflite
       script_name: classification-tflite
-      type: tflite
-      org_id: OMITTED_FOR_PRIVACY
+      model_type: tflite
     secrets: inherit
 ```
 
