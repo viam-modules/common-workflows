@@ -3,9 +3,11 @@ name: Deploy ML Training Image
 on:
   workflow_call:
     secrets:
-      API_KEY_ID:
+      VIAM_DEV_API_KEY_ID:
         required: true
-      API_KEY:
+      VIAM_DEV_API_KEY:
+        required: true
+      VIAM_DEV_ORG_ID:
         required: true
     inputs:
       framework:
@@ -14,51 +16,38 @@ on:
       script_name:
         type: string
         required: true
-      type:
+      model_type:
         type: string
         default: "unspecified"
-      org_id:
-        type: string
-        default: "e76d1b3b-0468-4efd-bb7f-fb1d2b352fcb"
+    timeout-minutes: 30
 
 jobs:
   deploy-staging:
     runs-on: [ubuntu-latest]
-    name: Rename testing container in staging and push to staging
-    
-    timeout-minutes: 30
-    
+    name: Deploy Latest ML Training Script to viam-dev
     steps:
-    - name: Get Version Tag
-      id: get-image-tag
-      run: |
-        echo "version-tag=$(date -u +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_OUTPUT
-
     - name: Check out training script code
       uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
+    - name: Setup Python3.10
+      uses: actions/setup-python@v3
       with:
         python-version: "3.10"
 
-    - name: Install Viam CLI
+    - name: Setup Viam CLI
       shell: bash
       run: |
         curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
         chmod a+rx /usr/local/bin/viam
+        viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
 
     - name: Create training package
       shell: bash
       run: |
         python3 setup.py sdist --formats=gztar
 
-    - name: Login to Viam CLI
-      shell: bash
-      run: |
-        viam login api-key --key-id ${{ secrets.API_KEY_ID }} --key ${{ secrets.API_KEY }}
-
     - name: Push to Viam Registry
       shell: bash
       run: |
-        viam training-script upload --framework=${{inputs.framework}} --org-id=${{inputs.org_id}} --path=dist/model-0.1.tar.gz --script-name=${{inputs.script_name}} --type=${{inputs.type}} --version=${{ steps.get-image-tag.outputs.version-tag }}
+        viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_DEV_ORG_ID }} --path=dist/model-0.1.tar.gz --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$(date -u +'%Y-%m-%dT%H-%M-%S')
 
 

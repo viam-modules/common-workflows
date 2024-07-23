@@ -15,14 +15,14 @@ jobs:
       framework: tflite
       script_name: classification-tflite
       type: tflite
-      org_id: e76d1b3b-0468-4efd-bb7f-fb1d2b352fcb
+      org_id: OMITTED_FOR_PRIVACY
     secrets: inherit
 ```
 
 This will call our shared `deploy_training_script` workflow with the necessary inputs.
 
 
-### Pull Request
+### Linting/Testing in Pull Requests
 
 When you add a new training script you should add workflows in `.github/workflows` and in the jobs section it should look like
 
@@ -33,3 +33,9 @@ jobs:
     with:
       test_script_name: scripts/test.sh
 ```
+
+### Secrets
+
+These workflows require a few secrets. They have already been set up as github secrets for the `viam-modules` org. So you shouldn't need to do anything special in your new repo. But for transparency, they can be found:
+ - API_KEY_ID and API_KEY: This is done using an API key that belongs to the `viam-dev` environment. These can be found by going to app.viam.com -> go to the `viam-dev` org -> Settings -> Find the keys named GITHUB_VIAM_MODULES.
+ - ORG_ID: This is `organization_id` for `viam-dev`. This can be found by navigating to Settings in app.viam.com and finding the `organization_id`.

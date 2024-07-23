@@ -5,7 +5,7 @@ on:
     inputs:
       test_script_name:
         type: string
-        default: /scripts/test.sh
+        default: scripts/test.sh
 
 jobs:
   build:
@@ -13,8 +13,6 @@ jobs:
     name: Lint and Test Code
     container:
       image: tensorflow/tensorflow:2.11.1-gpu
-      volumes:
-        - .:/host
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
