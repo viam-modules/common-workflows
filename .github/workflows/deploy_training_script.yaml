@@ -1,0 +1,53 @@
+name: Deploy ML Training Script to Registry
+
+on:
+  workflow_call:
+    secrets:
+      VIAM_DEV_API_KEY_ID:
+        required: true
+      VIAM_DEV_API_KEY:
+        required: true
+      VIAM_DEV_ORG_ID:
+        required: true
+    inputs:
+      framework:
+        type: string
+        default: "unspecified"
+      script_name:
+        type: string
+        required: true
+      model_type:
+        type: string
+        default: "unspecified"
+
+jobs:
+  deploy-staging:
+    runs-on: [ubuntu-latest]
+    name: Deploy Latest ML Training Script to viam-dev
+    timeout-minutes: 30
+    steps:
+    - name: Check out training script code
+      uses: actions/checkout@v3
+    - name: Setup Python3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Setup Viam CLI
+      shell: bash
+      run: |
+        curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
+        chmod a+rx /usr/local/bin/viam
+        viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
+
+    - name: Create training package
+      shell: bash
+      run: |
+        python3 setup.py sdist --formats=gztar
+
+    - name: Push to Viam Registry
+      shell: bash
+      run: |
+        viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_DEV_ORG_ID }} --path=dist/model-0.1.tar.gz --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$(date -u +'%Y-%m-%dT%H-%M-%S')
+
+

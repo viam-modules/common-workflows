@@ -1,0 +1,27 @@
+name: Lint Check and Test
+
+on:
+  workflow_call:
+    inputs:
+      test_script_name:
+        type: string
+        default: scripts/test.sh
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Lint and Test Code
+    container:
+      image: tensorflow/tensorflow:2.11.1-gpu
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: |
+        apt-get update && apt-get install -y libusb-1.0-0
+        python -m pip install --upgrade pip
+        pip install black pytest
+    - name: Lint
+      run: black . --check
+    - name: Run script locally with unit test
+      run: ${{inputs.test_script_name}}
+
