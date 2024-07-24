@@ -1,4 +1,4 @@
-name: Deploy ML Training Image
+name: Deploy ML Training Script to Registry
 
 on:
   workflow_call:
