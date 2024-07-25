@@ -6,7 +6,15 @@ on:
       test_script_name:
         type: string
         default: scripts/test.sh
-
+    secrets:
+      VIAM_DEV_API_KEY_ID:
+        required: true
+      VIAM_DEV_API_KEY:
+        required: true
+      VIAM_DEV_ORG_ID:
+        required: true
+      VIAM_DEV_DATASET_ID:
+        required: true
 jobs:
   build:
     runs-on: ubuntu-latest
