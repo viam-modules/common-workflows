@@ -39,7 +39,7 @@ jobs:
     - name: Download dataset file
       shell: bash
       run: |
-        viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DEV_DATASET_ID }} --include-json=true
+        viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DEV_DATASET_ID }} --include-jsonl=true
     - name: Run script locally with unit test
       run: ${{inputs.test_script_name}}
 
