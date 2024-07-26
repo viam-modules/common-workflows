@@ -33,7 +33,7 @@ jobs:
     - name: Setup Viam CLI
       shell: bash
       run: |
-        curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
+        curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-latest-linux-amd64
         chmod a+rx /usr/local/bin/viam
         viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
     - name: Download dataset file
