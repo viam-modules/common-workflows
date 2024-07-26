@@ -6,7 +6,15 @@ on:
       test_script_name:
         type: string
         default: scripts/test.sh
-
+    secrets:
+      VIAM_DEV_API_KEY_ID:
+        required: true
+      VIAM_DEV_API_KEY:
+        required: true
+      VIAM_DEV_ORG_ID:
+        required: true
+      VIAM_DEV_DATASET_ID:
+        required: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,6 +30,16 @@ jobs:
         pip install black pytest
     - name: Lint
       run: black . --check
+    - name: Setup Viam CLI
+      shell: bash
+      run: |
+        curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-latest-linux-amd64
+        chmod a+rx /usr/local/bin/viam
+        viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
+    - name: Download dataset file
+      shell: bash
+      run: |
+        viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DEV_DATASET_ID }} --include-jsonl=true
     - name: Run script locally with unit test
       run: ${{inputs.test_script_name}}
 
