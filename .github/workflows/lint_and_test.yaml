@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Lint and Test Code
     container:
-      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-14.py310@sha256:9c3e208736d2267d2ef9835dce3001660bef900b579546cddcc2320a7b676284
+      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-11.py310@sha256:c07deaa23374aef64f5ea6ad86e60ae09ed410381c60c565d0b27e2985481d15
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
