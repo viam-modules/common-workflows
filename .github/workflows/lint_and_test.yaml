@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Lint and Test Code
     container:
-      image: tensorflow/tensorflow:2.11.1-gpu
+      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-14.py310@sha256:9c3e208736d2267d2ef9835dce3001660bef900b579546cddcc2320a7b676284
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
@@ -33,7 +33,7 @@ jobs:
     - name: Setup Viam CLI
       shell: bash
       run: |
-        curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-latest-linux-amd64
+        curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
         chmod a+rx /usr/local/bin/viam
         viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
     - name: Download dataset file
@@ -42,4 +42,7 @@ jobs:
         viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DEV_DATASET_ID }} --include-jsonl=true
     - name: Run script locally with unit test
       run: ${{inputs.test_script_name}}
+      env: 
+        API_KEY: ${{ secrets.VIAM_DEV_API_KEY }}
+        API_KEY_ID: ${{ secrets.VIAM_DEV_API_KEY_ID }}
 
