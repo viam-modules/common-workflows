@@ -25,7 +25,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Install dependencies
       run: |
-        apt-get update && apt-get install -y libusb-1.0-0
+        apt-get update
         python -m pip install --upgrade pip
         pip install black pytest
     - name: Lint
