@@ -45,11 +45,6 @@ jobs:
       run: |
         python3 setup.py sdist --formats=gztar
 
-    - name: Create training package
-      shell: bash
-      run: |
-        python3 setup.py sdist --formats=gztar
-
     - name: Get name of first file with the correct extension
       id: file-extension
       shell: bash
