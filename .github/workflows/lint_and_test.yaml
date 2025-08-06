@@ -7,13 +7,13 @@ on:
         type: string
         default: scripts/test.sh
     secrets:
-      VIAM_DEV_API_KEY_ID:
+      VIAM_API_KEY_ID:
         required: true
-      VIAM_DEV_API_KEY:
+      VIAM_API_KEY:
         required: true
-      VIAM_DEV_ORG_ID:
+      VIAM_ORG_ID:
         required: true
-      VIAM_DEV_DATASET_ID:
+      VIAM_DATASET_ID:
         required: true
 jobs:
   build:
@@ -35,14 +35,14 @@ jobs:
       run: |
         curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
         chmod a+rx /usr/local/bin/viam
-        viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
+        viam login api-key --key-id ${{ secrets.VIAM_API_KEY_ID }} --key ${{ secrets.VIAM_API_KEY }}
     - name: Download dataset file
       shell: bash
       run: |
-        viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DEV_DATASET_ID }} --include-jsonl=true
+        viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DATASET_ID }} --include-jsonl=true
     - name: Run script locally with unit test
       run: ${{inputs.test_script_name}}
       env: 
-        API_KEY: ${{ secrets.VIAM_DEV_API_KEY }}
-        API_KEY_ID: ${{ secrets.VIAM_DEV_API_KEY_ID }}
+        API_KEY: ${{ secrets.VIAM_API_KEY }}
+        API_KEY_ID: ${{ secrets.VIAM_API_KEY_ID }}
 
