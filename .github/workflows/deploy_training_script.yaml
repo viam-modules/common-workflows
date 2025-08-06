@@ -54,7 +54,7 @@ jobs:
       id: file-extension
       shell: bash
       run: |
-        echo "::set-output name=path_name::$(ls dist/*.tar.gz | head -1)
+        echo "::set-output name=path_name::$(ls dist/*.tar.gz | head -1)"
 
     - name: Push to Viam Registry
       shell: bash
