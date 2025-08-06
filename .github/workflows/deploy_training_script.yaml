@@ -54,11 +54,11 @@ jobs:
       id: file-extension
       shell: bash
       run: |
-        echo "::set-output name=path_name::$(ls dist/*.tar.gz | head -1)"
+        echo "path_name=$(ls dist/*.tar.gz | head -1)" >> $GITHUB_OUTPUT
 
     - name: Push to Viam Registry
       shell: bash
       run: |
-        viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_ORG_ID }} --path=${{ steps.file-extension.path_name }} --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$(date -u +'%Y-%m-%dT%H-%M-%S')
+        viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_ORG_ID }} --path=${{ steps.file-extension.outputs.path_name }} --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$(date -u +'%Y-%m-%dT%H-%M-%S')
 
 
