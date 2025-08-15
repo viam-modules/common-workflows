@@ -9,6 +9,8 @@ on:
         required: true
       VIAM_ORG_ID:
         required: true
+      GITHUB_TOKEN:
+        required: false
     inputs:
       framework:
         type: string
