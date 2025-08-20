@@ -15,6 +15,8 @@ on:
         required: true
       VIAM_DATASET_ID:
         required: true
+      TOKEN:
+        required: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,6 +25,9 @@ jobs:
       image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-14.py310@sha256:9c3e208736d2267d2ef9835dce3001660bef900b579546cddcc2320a7b676284
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        token: ${{ secrets.TOKEN || github.token }}
     - name: Install dependencies
       run: |
         apt-get update
