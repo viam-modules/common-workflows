@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Lint and Test Code
     container:
-      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-14.py310@sha256:9c3e208736d2267d2ef9835dce3001660bef900b579546cddcc2320a7b676284
+      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-15.py310@sha256:91d4a10ec627bc0b38cb4f159201b2886f5e47c34e782ead3e297827252afb85
     steps:
     - uses: actions/checkout@v3
       with:
