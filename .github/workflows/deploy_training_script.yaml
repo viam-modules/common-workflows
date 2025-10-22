@@ -3,12 +3,14 @@ name: Deploy ML Training Script to Registry
 on:
   workflow_call:
     secrets:
-      VIAM_DEV_API_KEY_ID:
+      VIAM_API_KEY_ID:
         required: true
-      VIAM_DEV_API_KEY:
+      VIAM_API_KEY:
         required: true
-      VIAM_DEV_ORG_ID:
+      VIAM_ORG_ID:
         required: true
+      TOKEN:
+        required: false
     inputs:
       framework:
         type: string
@@ -21,13 +23,16 @@ on:
         default: "unspecified"
 
 jobs:
-  deploy-staging:
+  deploy-scripts:
     runs-on: [ubuntu-latest]
-    name: Deploy Latest ML Training Script to viam-dev
+    name: Deploy Latest ML Training Script to Desired Org
     timeout-minutes: 30
     steps:
     - name: Check out training script code
       uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        token: ${{ secrets.TOKEN || github.token }}
     - name: Setup Python3.10
       uses: actions/setup-python@v3
       with:
@@ -38,16 +43,27 @@ jobs:
       run: |
         curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
         chmod a+rx /usr/local/bin/viam
-        viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
+        viam login api-key --key-id ${{ secrets.VIAM_API_KEY_ID }} --key ${{ secrets.VIAM_API_KEY }}
 
     - name: Create training package
       shell: bash
       run: |
         python3 setup.py sdist --formats=gztar
 
+    - name: Get name of first file with the correct extension
+      id: file-extension
+      shell: bash
+      run: |
+        echo "path_name=$(ls dist/*.tar.gz | head -1)" >> $GITHUB_OUTPUT
+
     - name: Push to Viam Registry
       shell: bash
       run: |
-        viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_DEV_ORG_ID }} --path=dist/model-0.1.tar.gz --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$(date -u +'%Y-%m-%dT%H-%M-%S')
+        if [ -n "${{ github.event.release.tag_name }}" ]; then
+          VERSION="${{ github.event.release.tag_name }}"
+        else
+          VERSION=$(date -u +'%Y-%m-%dT%H-%M-%S')
+        fi
+        viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_ORG_ID }} --path=${{ steps.file-extension.outputs.path_name }} --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$VERSION
 
 

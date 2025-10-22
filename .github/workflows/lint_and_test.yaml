@@ -7,22 +7,27 @@ on:
         type: string
         default: scripts/test.sh
     secrets:
-      VIAM_DEV_API_KEY_ID:
+      VIAM_API_KEY_ID:
         required: true
-      VIAM_DEV_API_KEY:
+      VIAM_API_KEY:
         required: true
-      VIAM_DEV_ORG_ID:
+      VIAM_ORG_ID:
         required: true
-      VIAM_DEV_DATASET_ID:
+      VIAM_DATASET_ID:
         required: true
+      TOKEN:
+        required: false
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Lint and Test Code
     container:
-      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-14.py310@sha256:9c3e208736d2267d2ef9835dce3001660bef900b579546cddcc2320a7b676284
+      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-15.py310@sha256:91d4a10ec627bc0b38cb4f159201b2886f5e47c34e782ead3e297827252afb85
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        token: ${{ secrets.TOKEN || github.token }}
     - name: Install dependencies
       run: |
         apt-get update
@@ -35,14 +40,14 @@ jobs:
       run: |
         curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64
         chmod a+rx /usr/local/bin/viam
-        viam login api-key --key-id ${{ secrets.VIAM_DEV_API_KEY_ID }} --key ${{ secrets.VIAM_DEV_API_KEY }}
+        viam login api-key --key-id ${{ secrets.VIAM_API_KEY_ID }} --key ${{ secrets.VIAM_API_KEY }}
     - name: Download dataset file
       shell: bash
       run: |
-        viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DEV_DATASET_ID }}
+        viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DATASET_ID }}
     - name: Run script locally with unit test
       run: ${{inputs.test_script_name}}
       env: 
-        API_KEY: ${{ secrets.VIAM_DEV_API_KEY }}
-        API_KEY_ID: ${{ secrets.VIAM_DEV_API_KEY_ID }}
+        API_KEY: ${{ secrets.VIAM_API_KEY }}
+        API_KEY_ID: ${{ secrets.VIAM_API_KEY_ID }}
 
