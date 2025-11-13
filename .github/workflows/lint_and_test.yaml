@@ -19,7 +19,7 @@ on:
         required: false
 jobs:
   build:
-    runs-on: ubuntu-2core-8gb-75gb
+    runs-on: ubuntu-latest-2cpu-75gb
     name: Lint and Test Code
     container:
       image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-16.py310@sha256:88dfb14472ead40bfa4a39a263820654d7f9403e5d1a945d87790ce87afb8b69
