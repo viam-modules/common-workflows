@@ -24,10 +24,6 @@ jobs:
     container:
       image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-16.py310@sha256:88dfb14472ead40bfa4a39a263820654d7f9403e5d1a945d87790ce87afb8b69
     steps:
-    - name: Debug - Initial disk space
-      run: |
-        echo "=== Disk space at start ==="
-        df -h
     - uses: actions/checkout@v3
       with:
         submodules: recursive
@@ -49,19 +45,8 @@ jobs:
       shell: bash
       run: |
         viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DATASET_ID }}
-    - name: Debug - Disk space after dataset download
-      run: |
-        echo "=== Disk space after dataset download ==="
-        df -h
-        echo "=== Dataset file size ==="
-        ls -lh . | grep -v "^d" || true
     - name: Run script locally with unit test
       run: ${{inputs.test_script_name}}
       env: 
         API_KEY: ${{ secrets.VIAM_API_KEY }}
         API_KEY_ID: ${{ secrets.VIAM_API_KEY_ID }}
-    - name: Debug - Final disk space
-      if: always()
-      run: |
-        echo "=== Disk space at end ==="
-        df -h
