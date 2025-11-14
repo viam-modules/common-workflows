@@ -24,15 +24,39 @@ jobs:
     container:
       image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-16.py310@sha256:88dfb14472ead40bfa4a39a263820654d7f9403e5d1a945d87790ce87afb8b69
     steps:
+    - name: Debug - Check initial disk space
+      run: |
+        echo "=== Disk space before checkout ==="
+        df -h
+        echo "=== Disk usage by directory ==="
+        du -sh /* 2>/dev/null || true
+        echo "=== Docker images ==="
+        docker images || true
+        echo "=== Docker system df ==="
+        docker system df || true
     - uses: actions/checkout@v3
       with:
         submodules: recursive
         token: ${{ secrets.TOKEN || github.token }}
+    - name: Debug - Check disk space after checkout
+      run: |
+        echo "=== Disk space after checkout ==="
+        df -h
+        echo "=== Size of workspace ==="
+        du -sh $GITHUB_WORKSPACE
     - name: Install dependencies
       run: |
         apt-get update
         python -m pip install --upgrade pip
         pip install black pytest
+    - name: Debug - Check disk space after dependencies
+      run: |
+        echo "=== Disk space after installing dependencies ==="
+        df -h
+        echo "=== Apt cache size ==="
+        du -sh /var/cache/apt || true
+        echo "=== Pip cache size ==="
+        du -sh ~/.cache/pip || true
     - name: Lint
       run: black . --check
     - name: Setup Viam CLI
@@ -45,6 +69,12 @@ jobs:
       shell: bash
       run: |
         viam dataset export --destination=. --dataset-id=${{ secrets.VIAM_DATASET_ID }}
+    - name: Debug - Check disk space after dataset download
+      run: |
+        echo "=== Disk space after dataset download ==="
+        df -h
+        echo "=== Downloaded dataset size ==="
+        ls -lh . || true
     - name: Run script locally with unit test
       run: ${{inputs.test_script_name}}
       env: 
