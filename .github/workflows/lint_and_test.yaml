@@ -6,6 +6,8 @@ on:
       test_script_name:
         type: string
         default: scripts/test.sh
+      container_image:
+        type: string
     secrets:
       VIAM_API_KEY_ID:
         required: true
@@ -18,11 +20,63 @@ on:
       TOKEN:
         required: false
 jobs:
+  resolve-container:
+    runs-on: ubuntu-latest
+    name: Resolve Container URI
+    outputs:
+      container_uri: ${{ steps.resolve.outputs.container_uri }}
+    steps:
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y wget curl jq
+        # Install grpcurl
+        wget https://github.com/fullstorydev/grpcurl/releases/download/v1.8.9/grpcurl_1.8.9_linux_x86_64.tar.gz
+        tar -xzf grpcurl_1.8.9_linux_x86_64.tar.gz
+        mv grpcurl /usr/local/bin/
+        # Install buf
+        wget https://github.com/bufbuild/buf/releases/download/v1.30.0/buf-Linux-x86_64
+        chmod +x buf-Linux-x86_64
+        mv buf-Linux-x86_64 /usr/local/bin/buf
+    - name: Resolve container URI from gRPC endpoint
+      id: resolve
+      run: |
+        set -e
+        
+        # Step 1: Get auth token
+        TOKEN=$(grpcurl -d "{
+          \"entity\": \"${{ secrets.VIAM_ORG_ID }}\",
+          \"credentials\": {
+            \"type\": \"api-key\",
+            \"payload\": \"${{ secrets.VIAM_API_KEY }}\"
+          }
+        }" -protoset <(buf build -o - buf.build/viamrobotics/goutils) app.viam.com:443 proto.rpc.v1.AuthService/Authenticate | jq -r .accessToken)
+        
+        # Step 2: Call ListSupportedContainers
+        CONTAINER_RESPONSE=$(grpcurl \
+          -H "authorization: Bearer $TOKEN" \
+          -d '{}' \
+          -protoset <(buf build -o - buf.build/viamrobotics/api) \
+          app.viam.dev:443 \
+          viam.app.mltraining.v1.MLTrainingService/ListSupportedContainers)
+        
+        # Step 3: Look up container_image in the response
+        CONTAINER_KEY="${{ inputs.container_image }}"
+        CONTAINER_URI=$(echo "$CONTAINER_RESPONSE" | jq -r --arg key "$CONTAINER_KEY" '.containerMap[$key].uri // empty')
+        
+        if [ -z "$CONTAINER_URI" ] || [ "$CONTAINER_URI" = "null" ]; then
+          echo "⚠️  Warning: Container key '$CONTAINER_KEY' not found in supported containers. Using provided value as URI."
+          CONTAINER_URI="$CONTAINER_KEY"
+        else
+          echo "✓ Found container URI for key '$CONTAINER_KEY': $CONTAINER_URI"
+        fi
+        
+        echo "container_uri=$CONTAINER_URI" >> $GITHUB_OUTPUT
   build:
     runs-on: ubuntu-latest-4cpu-150gb
     name: Lint and Test Code
     container:
-      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-16.py310@sha256:88dfb14472ead40bfa4a39a263820654d7f9403e5d1a945d87790ce87afb8b69
+      image: ${{ needs.resolve-container.outputs.container_uri }}
     steps:
     - uses: actions/checkout@v3
       with:
