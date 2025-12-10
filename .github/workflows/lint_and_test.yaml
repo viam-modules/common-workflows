@@ -30,12 +30,20 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y wget curl jq
+        
         # Install grpcurl
-        wget https://github.com/fullstorydev/grpcurl/releases/download/v1.8.9/grpcurl_1.8.9_linux_x86_64.tar.gz
-        tar -xzf grpcurl_1.8.9_linux_x86_64.tar.gz
+        if ! wget https://github.com/fullstorydev/grpcurl/releases/download/v1.9.2/grpcurl_1.9.2_linux_x86_64.tar.gz; then
+          echo "❌ Error: Failed to download grpcurl"
+          exit 1
+        fi
+        tar -xzf grpcurl_1.9.2_linux_x86_64.tar.gz
         mv grpcurl /usr/local/bin/
+        
         # Install buf
-        wget https://github.com/bufbuild/buf/releases/download/v1.30.0/buf-Linux-x86_64
+        if ! wget https://github.com/bufbuild/buf/releases/download/v1.60.0/buf-Linux-x86_64; then
+          echo "❌ Error: Failed to download buf"
+          exit 1
+        fi
         chmod +x buf-Linux-x86_64
         mv buf-Linux-x86_64 /usr/local/bin/buf
     - name: Resolve container URI from gRPC endpoint
@@ -70,7 +78,7 @@ jobs:
         fi
         
         # Step 1: Get auth token
-        TOKEN=$(grpcurl -d "{
+        TOKEN=$(grpcurl -max-time 30 -d "{
           \"entity\": \"${{ secrets.VIAM_API_KEY_ID }}\",
           \"credentials\": {
             \"type\": \"api-key\",
@@ -86,6 +94,7 @@ jobs:
         
         # Step 2: Call ListSupportedContainers
         CONTAINER_RESPONSE=$(grpcurl \
+          -max-time 30 \
           -H "authorization: Bearer $TOKEN" \
           -d '{}' \
           -protoset "$API_PROTOSET" \
