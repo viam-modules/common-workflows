@@ -57,7 +57,7 @@ jobs:
           -H "authorization: Bearer $TOKEN" \
           -d '{}' \
           -protoset <(buf build -o - buf.build/viamrobotics/api) \
-          app.viam.dev:443 \
+          app.viam.com:443 \
           viam.app.mltraining.v1.MLTrainingService/ListSupportedContainers)
         
         # Step 3: Look up container_image in the response
@@ -73,6 +73,7 @@ jobs:
         
         echo "container_uri=$CONTAINER_URI" >> $GITHUB_OUTPUT
   build:
+    needs: resolve-container
     runs-on: ubuntu-latest-4cpu-150gb
     name: Lint and Test Code
     container:
