@@ -41,7 +41,33 @@ jobs:
     - name: Resolve container URI from gRPC endpoint
       id: resolve
       run: |
-        set -e
+        set -euo pipefail
+        
+        CONTAINER_KEY="${{ inputs.container_image }}"
+        
+        # Validate input
+        if [ -z "$CONTAINER_KEY" ]; then
+          echo "❌ Error: container_image input is required"
+          exit 1
+        fi
+        
+        # Build protosets with error handling
+        GOUTILS_PROTOSET=$(mktemp)
+        API_PROTOSET=$(mktemp)
+        trap "rm -f $GOUTILS_PROTOSET $API_PROTOSET" EXIT
+        
+        echo "Building protosets..."
+        if ! buf build -o "$GOUTILS_PROTOSET" buf.build/viamrobotics/goutils; then
+          echo "⚠️  Warning: Failed to build goutils protoset. Using container_image as-is."
+          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        if ! buf build -o "$API_PROTOSET" buf.build/viamrobotics/api; then
+          echo "⚠️  Warning: Failed to build api protoset. Using container_image as-is."
+          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
+          exit 0
+        fi
         
         # Step 1: Get auth token
         TOKEN=$(grpcurl -d "{
@@ -50,18 +76,29 @@ jobs:
             \"type\": \"api-key\",
             \"payload\": \"${{ secrets.VIAM_API_KEY }}\"
           }
-        }" -protoset <(buf build -o - buf.build/viamrobotics/goutils) app.viam.com:443 proto.rpc.v1.AuthService/Authenticate | jq -r .accessToken)
+        }" -protoset "$GOUTILS_PROTOSET" app.viam.com:443 proto.rpc.v1.AuthService/Authenticate | jq -r .accessToken)
+        
+        if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+          echo "⚠️  Warning: Failed to authenticate. Using container_image as-is."
+          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
+          exit 0
+        fi
         
         # Step 2: Call ListSupportedContainers
         CONTAINER_RESPONSE=$(grpcurl \
           -H "authorization: Bearer $TOKEN" \
           -d '{}' \
-          -protoset <(buf build -o - buf.build/viamrobotics/api) \
+          -protoset "$API_PROTOSET" \
           app.viam.com:443 \
           viam.app.mltraining.v1.MLTrainingService/ListSupportedContainers)
         
+        if [ -z "$CONTAINER_RESPONSE" ]; then
+          echo "⚠️  Warning: Failed to fetch supported containers. Using container_image as-is."
+          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
         # Step 3: Look up container_image in the response
-        CONTAINER_KEY="${{ inputs.container_image }}"
         CONTAINER_URI=$(echo "$CONTAINER_RESPONSE" | jq -r --arg key "$CONTAINER_KEY" '.containerMap[$key].uri // empty')
         
         if [ -z "$CONTAINER_URI" ] || [ "$CONTAINER_URI" = "null" ]; then
