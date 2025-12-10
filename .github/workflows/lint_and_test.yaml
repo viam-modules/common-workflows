@@ -28,8 +28,8 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        apt-get update
-        apt-get install -y wget curl jq
+        sudo apt-get update
+        sudo apt-get install -y wget curl jq
         # Install grpcurl
         wget https://github.com/fullstorydev/grpcurl/releases/download/v1.8.9/grpcurl_1.8.9_linux_x86_64.tar.gz
         tar -xzf grpcurl_1.8.9_linux_x86_64.tar.gz
