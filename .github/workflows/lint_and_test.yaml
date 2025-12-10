@@ -45,7 +45,7 @@ jobs:
         
         # Step 1: Get auth token
         TOKEN=$(grpcurl -d "{
-          \"entity\": \"${{ secrets.VIAM_ORG_ID }}\",
+          \"entity\": \"${{ secrets.VIAM_API_KEY_ID }}\",
           \"credentials\": {
             \"type\": \"api-key\",
             \"payload\": \"${{ secrets.VIAM_API_KEY }}\"
