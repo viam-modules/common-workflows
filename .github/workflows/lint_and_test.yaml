@@ -29,24 +29,19 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget curl jq
+        sudo apt-get install -y jq
         
-        # Install grpcurl
-        if ! wget https://github.com/fullstorydev/grpcurl/releases/download/v1.9.2/grpcurl_1.9.2_linux_x86_64.tar.gz; then
-          echo "❌ Error: Failed to download grpcurl"
+        # Install viam CLI
+        if ! curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64; then
+          echo "❌ Error: Failed to download viam CLI"
           exit 1
         fi
-        tar -xzf grpcurl_1.9.2_linux_x86_64.tar.gz
-        mv grpcurl /usr/local/bin/
-        
-        # Install buf
-        if ! wget https://github.com/bufbuild/buf/releases/download/v1.60.0/buf-Linux-x86_64; then
-          echo "❌ Error: Failed to download buf"
-          exit 1
-        fi
-        chmod +x buf-Linux-x86_64
-        mv buf-Linux-x86_64 /usr/local/bin/buf
-    - name: Resolve container URI from gRPC endpoint
+        chmod a+rx /usr/local/bin/viam
+    - name: Authenticate with viam CLI
+      run: |
+        viam login api-key --key-id ${{ secrets.VIAM_API_KEY_ID }} --key ${{ secrets.VIAM_API_KEY }}
+    
+    - name: Resolve container URI from viam CLI
       id: resolve
       run: |
         set -euo pipefail
@@ -59,47 +54,9 @@ jobs:
           exit 1
         fi
         
-        # Build protosets with error handling
-        GOUTILS_PROTOSET=$(mktemp)
-        API_PROTOSET=$(mktemp)
-        trap "rm -f $GOUTILS_PROTOSET $API_PROTOSET" EXIT
-        
-        echo "Building protosets..."
-        if ! buf build -o "$GOUTILS_PROTOSET" buf.build/viamrobotics/goutils; then
-          echo "⚠️  Warning: Failed to build goutils protoset. Using container_image as-is."
-          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-        
-        if ! buf build -o "$API_PROTOSET" buf.build/viamrobotics/api; then
-          echo "⚠️  Warning: Failed to build api protoset. Using container_image as-is."
-          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-        
-        # Step 1: Get auth token
-        TOKEN=$(grpcurl -max-time 30 -d "{
-          \"entity\": \"${{ secrets.VIAM_API_KEY_ID }}\",
-          \"credentials\": {
-            \"type\": \"api-key\",
-            \"payload\": \"${{ secrets.VIAM_API_KEY }}\"
-          }
-        }" -protoset "$GOUTILS_PROTOSET" app.viam.com:443 proto.rpc.v1.AuthService/Authenticate | jq -r .accessToken)
-        
-        if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-          echo "⚠️  Warning: Failed to authenticate. Using container_image as-is."
-          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-        
-        # Step 2: Call ListSupportedContainers
-        CONTAINER_RESPONSE=$(grpcurl \
-          -max-time 30 \
-          -H "authorization: Bearer $TOKEN" \
-          -d '{}' \
-          -protoset "$API_PROTOSET" \
-          app.viam.com:443 \
-          viam.app.mltraining.v1.MLTrainingService/ListSupportedContainers)
+        # Get list of containers from viam CLI
+        echo "Fetching supported containers..."
+        CONTAINER_RESPONSE=$(viam train containers list --include-uris)
         
         if [ -z "$CONTAINER_RESPONSE" ]; then
           echo "⚠️  Warning: Failed to fetch supported containers. Using container_image as-is."
@@ -107,8 +64,8 @@ jobs:
           exit 0
         fi
         
-        # Step 3: Look up container_image in the response
-        CONTAINER_URI=$(echo "$CONTAINER_RESPONSE" | jq -r --arg key "$CONTAINER_KEY" '.containerMap[$key].uri // empty')
+        # Look up container_image in the response by matching Name field
+        CONTAINER_URI=$(echo "$CONTAINER_RESPONSE" | jq -r --arg key "$CONTAINER_KEY" '.[] | select(.Name == $key) | .URI // empty')
         
         if [ -z "$CONTAINER_URI" ] || [ "$CONTAINER_URI" = "null" ]; then
           echo "⚠️  Warning: Container key '$CONTAINER_KEY' not found in supported containers. Using provided value as URI."
