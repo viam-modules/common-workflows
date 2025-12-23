@@ -31,7 +31,12 @@ jobs:
     uses: viam-modules/common-workflows/.github/workflows/lint_and_test.yaml@main
     with:
       test_script_name: scripts/test.sh
+      container_image: tf:2.16
 ```
+
+**Inputs:**
+- `test_script_name` (optional, default: `scripts/test.sh`): Path to the test script to run
+- `container_image` (required): The ML training container you will use this script with. Must be one of the supported container names found by calling ListSupportedContainers. An easy way to do this is to run `viam train containers list`.
 
 ### Secrets
 

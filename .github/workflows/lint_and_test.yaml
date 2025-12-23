@@ -6,6 +6,8 @@ on:
       test_script_name:
         type: string
         default: scripts/test.sh
+      container_image:
+        type: string
     secrets:
       VIAM_API_KEY_ID:
         required: true
@@ -18,11 +20,67 @@ on:
       TOKEN:
         required: false
 jobs:
+  resolve-container:
+    runs-on: ubuntu-latest
+    name: Resolve Container URI
+    outputs:
+      container_uri: ${{ steps.resolve.outputs.container_uri }}
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+        
+        # Install viam CLI
+        if ! curl -o /usr/local/bin/viam https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-stable-linux-amd64; then
+          echo "❌ Error: Failed to download viam CLI"
+          exit 1
+        fi
+        chmod a+rx /usr/local/bin/viam
+    - name: Authenticate with viam CLI
+      run: |
+        viam login api-key --key-id ${{ secrets.VIAM_API_KEY_ID }} --key ${{ secrets.VIAM_API_KEY }}
+    
+    - name: Resolve container URI from viam CLI
+      id: resolve
+      run: |
+        set -euo pipefail
+        
+        CONTAINER_KEY="${{ inputs.container_image }}"
+        
+        # Validate input
+        if [ -z "$CONTAINER_KEY" ]; then
+          echo "❌ Error: container_image input is required"
+          exit 1
+        fi
+        
+        # Get list of containers from viam CLI
+        echo "Fetching supported containers..."
+        CONTAINER_RESPONSE=$(viam train containers list --include-uris)
+        
+        if [ -z "$CONTAINER_RESPONSE" ]; then
+          echo "⚠️  Warning: Failed to fetch supported containers. Using container_image as-is."
+          echo "container_uri=$CONTAINER_KEY" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Look up container_image in the response by matching Name field
+        CONTAINER_URI=$(echo "$CONTAINER_RESPONSE" | jq -r --arg key "$CONTAINER_KEY" '.[] | select(.Name == $key) | .URI // empty')
+        
+        if [ -z "$CONTAINER_URI" ] || [ "$CONTAINER_URI" = "null" ]; then
+          echo "⚠️  Warning: Container key '$CONTAINER_KEY' not found in supported containers. Using provided value as URI."
+          CONTAINER_URI="$CONTAINER_KEY"
+        else
+          echo "✓ Found container URI for key '$CONTAINER_KEY': $CONTAINER_URI"
+        fi
+        
+        echo "container_uri=$CONTAINER_URI" >> $GITHUB_OUTPUT
   build:
+    needs: resolve-container
     runs-on: ubuntu-latest-4cpu-150gb
     name: Lint and Test Code
     container:
-      image: us-docker.pkg.dev/vertex-ai/training/tf-gpu.2-16.py310@sha256:88dfb14472ead40bfa4a39a263820654d7f9403e5d1a945d87790ce87afb8b69
+      image: ${{ needs.resolve-container.outputs.container_uri }}
     steps:
     - uses: actions/checkout@v3
       with:
