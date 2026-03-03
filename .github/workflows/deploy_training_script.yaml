@@ -64,4 +64,4 @@ jobs:
           else
             VERSION=$(date -u +'%Y-%m-%dT%H-%M-%S')
           fi
-          viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_ORG_ID }} --path=${{ steps.file-extension.outputs.path_name }} --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$VERSION --visibility
+          viam training-script upload --framework=${{ inputs.framework }} --org-id=${{ secrets.VIAM_ORG_ID }} --path=${{ steps.file-extension.outputs.path_name }} --script-name=${{ inputs.script_name }} --type=${{ inputs.model_type }} --version=$VERSION --visibility="public"
