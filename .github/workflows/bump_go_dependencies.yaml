@@ -1,0 +1,49 @@
+name: Bump Go Dependencies
+
+on:
+  workflow_call:
+    inputs:
+      packages:
+        description: 'Space-separated list of Go packages to update'
+        type: string
+        default: 'go.viam.com/rdk go.viam.com/api'
+      base:
+        description: 'Base branch for the pull request'
+        type: string
+        default: 'main'
+
+jobs:
+  bump-versions:
+    name: Bump Package Versions
+    if: github.repository_owner == 'viam-modules'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/viamrobotics/rdk-devenv:amd64
+    timeout-minutes: 10
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+    - name: Update go dependencies
+      id: gobump
+      run: |
+        sudo chown -R testbot .
+        for pkg in ${{ inputs.packages }}; do
+          sudo -u testbot bash -lc "go get $pkg"
+        done
+        sudo -u testbot bash -lc 'go mod tidy'
+        GEN_DIFF=$(git status -s)
+
+        if [ -n "$GEN_DIFF" ]; then
+            echo "needs_pr=1" >> $GITHUB_OUTPUT
+        fi
+    - name: Add + Commit + Open PR
+      if: steps.gobump.outputs.needs_pr == 1
+      uses: peter-evans/create-pull-request@v7
+      with:
+          commit-message: '[WORKFLOW] Updating go dependencies'
+          branch: 'workflow/update-dependencies'
+          delete-branch: true
+          base: ${{ inputs.base }}
+          title: Automated Go Dependencies Update
+          body: This is an auto-generated PR to update go dependencies. Please confirm tests are passing before merging.
