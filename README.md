@@ -38,6 +38,33 @@ jobs:
 - `test_script_name` (optional, default: `scripts/test.sh`): Path to the test script to run
 - `container_image` (required): The ML training container you will use this script with. Must be one of the supported container names found by calling ListSupportedContainers. An easy way to do this is to run `viam train containers list`.
 
+### Bump Go Dependencies
+
+To keep a Go module's `go.viam.com/rdk` (and `go.viam.com/api`) dependency up to date automatically, add a workflow in `.github/workflows` like:
+
+```
+name: Bump Versions
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  schedule:
+    - cron: '30 17 * * WED' # 12:30 EST on Wednesdays
+  workflow_dispatch:
+
+jobs:
+  bump-versions:
+    uses: viam-modules/common-workflows/.github/workflows/bump_go_dependencies.yaml@main
+```
+
+On each run it updates the requested packages (and only the transitive minimums they require — not all dependencies), runs `go mod tidy`, and opens a PR if anything changed.
+
+**Inputs:**
+- `packages` (optional, default: `go.viam.com/rdk go.viam.com/api`): Space-separated list of Go packages to update
+- `base` (optional, default: `main`): Base branch for the pull request
+
 ### Secrets
 
 These workflows require a few secrets. They have already been set up as github secrets for the `viam-modules` org. So you shouldn't need to do anything special in your new repo. But for transparency, they can be found:
