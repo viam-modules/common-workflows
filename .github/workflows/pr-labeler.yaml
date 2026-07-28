@@ -1,0 +1,79 @@
+name: PR Test Label Manager
+
+# Strip the gate label on each push; re-add it when the sender is an org
+# member. Applied with a GitHub App token: GITHUB_TOKEN label events cannot
+# trigger the gated workflows.
+
+on:
+  workflow_call:
+    inputs:
+      label:
+        description: Label that gates privileged PR workflows
+        type: string
+        default: safe to test
+      member_org:
+        description: GitHub org whose members get the label automatically
+        type: string
+        default: viamrobotics
+    secrets:
+      APP_ID:
+        description: GitHub App ID used to mint the labeling token
+        required: true
+      APP_PRIVATE_KEY:
+        description: Private key of the GitHub App
+        required: true
+
+jobs:
+  manage_label:
+    name: Manage PR test label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint App token
+        id: app-token
+        # actions/create-github-app-token@v3.2.0
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Check membership and manage label
+        id: check-membership
+        # actions/github-script@v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const label = ${{ toJSON(inputs.label) }};
+            const org = ${{ toJSON(inputs.member_org) }};
+            const prNumber = context.payload.pull_request && context.payload.pull_request.number;
+            if (!prNumber) {
+              core.setFailed('This workflow only handles pull_request_target events.');
+              return false;
+            }
+            const { owner, repo } = context.repo;
+            try {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name: label });
+            } catch (err) {
+              core.info(`Non-fatal: could not remove '${label}': ${err}`);
+            }
+            const sender = context.payload.sender.login;
+            let isMember = false;
+            try {
+              const resp = await github.rest.orgs.checkMembershipForUser({ org, username: sender });
+              isMember = resp.status === 204;
+            } catch (err) {
+              core.info(`${sender} is not a member of ${org}: ${err}`);
+            }
+            if (isMember) {
+              await github.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [label] });
+            }
+            return isMember;
+
+      - name: Add unsafe PR comment
+        if: steps.check-membership.outputs.result != 'true'
+        # marocchino/sticky-pull-request-comment@v3.0.4
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0
+        with:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          recreate: true
+          message: For security reasons, this PR must be labeled with `${{ inputs.label }}` in order for tests to run.
