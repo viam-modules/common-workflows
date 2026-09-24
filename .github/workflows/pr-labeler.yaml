@@ -1,8 +1,8 @@
 name: PR Test Label Manager
 
 # Strip the gate label on each push; re-add it when the sender is an org
-# member. Applied with a GitHub App token: GITHUB_TOKEN label events cannot
-# trigger the gated workflows.
+# member or a trusted bot pushing a same-repo branch. Applied with a GitHub
+# App token: GITHUB_TOKEN label events cannot trigger the gated workflows.
 
 on:
   workflow_call:
@@ -15,6 +15,10 @@ on:
         description: GitHub org whose members get the label automatically
         type: string
         default: viamrobotics
+      trusted_bots:
+        description: Comma-separated non-member bot logins that get the label on same-repo branches
+        type: string
+        default: dependabot[bot],viam-overwatch[bot]
     secrets:
       APP_ID:
         description: GitHub App ID used to mint the labeling token
@@ -45,6 +49,7 @@ jobs:
           script: |
             const label = ${{ toJSON(inputs.label) }};
             const org = ${{ toJSON(inputs.member_org) }};
+            const trustedBots = ${{ toJSON(inputs.trusted_bots) }}.split(",").map(s => s.trim()).filter(Boolean);
             const prNumber = context.payload.pull_request && context.payload.pull_request.number;
             if (!prNumber) {
               core.setFailed('This workflow only handles pull_request_target events.');
@@ -56,18 +61,23 @@ jobs:
             } catch (err) {
               core.info(`Non-fatal: could not remove '${label}': ${err}`);
             }
+            const pr = context.payload.pull_request;
             const sender = context.payload.sender.login;
-            let isMember = false;
-            try {
-              const resp = await github.rest.orgs.checkMembershipForUser({ org, username: sender });
-              isMember = resp.status === 204;
-            } catch (err) {
-              core.info(`${sender} is not a member of ${org}: ${err}`);
+            // Forks never take the bot path, so a bot login cannot skip the membership check from outside.
+            const isFork = pr.head.repo?.full_name !== pr.base.repo.full_name;
+            let isAuthorized = !isFork && trustedBots.includes(sender);
+            if (!isAuthorized) {
+              try {
+                const resp = await github.rest.orgs.checkMembershipForUser({ org, username: sender });
+                isAuthorized = resp.status === 204;
+              } catch (err) {
+                core.info(`${sender} is not a member of ${org}: ${err}`);
+              }
             }
-            if (isMember) {
+            if (isAuthorized) {
               await github.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [label] });
             }
-            return isMember;
+            return isAuthorized;
 
       - name: Add unsafe PR comment
         if: steps.check-membership.outputs.result != 'true'
